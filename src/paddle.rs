@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::WindowDimensions;
+use crate::{PlayerId, WindowDimensions};
 
 pub struct PaddlePlugin;
 
@@ -16,7 +16,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let paddle_dimensions = PaddleDimensions::default();
 
     commands.spawn((
-        Paddle(0),
+        Paddle,
+        PlayerId(0),
         SpriteBundle {
             texture: paddle_texture_handle.clone(),
             transform: Transform {
@@ -29,7 +30,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 
     commands.spawn((
-        Paddle(1),
+        Paddle,
+        PlayerId(1),
         SpriteBundle {
             texture: paddle_texture_handle,
             transform: Transform {
@@ -47,7 +49,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 const PADDLE_OFFSET_FROM_WALL: f32 = 50.0;
 fn update_to_screensize(
     window_dimension: Res<WindowDimensions>,
-    mut paddles: Query<(&mut Transform, &Paddle)>,
+    mut paddles: Query<(&mut Transform, &PlayerId), With<Paddle>>,
 ) {
     for (mut transform, paddle) in paddles.iter_mut() {
         let offset = if paddle.0 == 0 {
@@ -62,7 +64,7 @@ fn update_to_screensize(
 
 fn move_paddle(
     window_dimension: Res<WindowDimensions>,
-    mut paddles: Query<(&mut Transform, &Paddle)>,
+    mut paddles: Query<(&mut Transform, &PlayerId), With<Paddle>>,
     keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
 ) {
@@ -97,7 +99,7 @@ fn move_paddle(
 }
 
 #[derive(Debug, Component)]
-pub struct Paddle(u8);
+pub struct Paddle;
 
 pub const PADDLE_WIDTH: f32 = 20.0;
 pub const PADDLE_HEIGHT: f32 = 160.0;

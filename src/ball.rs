@@ -2,11 +2,11 @@ use bevy::prelude::*;
 
 use crate::{
     paddle::{Paddle, PaddleDimensions},
-    Velocity, WindowDimensions,
+    Score, Velocity, WindowDimensions,
 };
 
 const BASE_BALL_SPEED: f32 = 300.0;
-const BALL_SPEED_MULTIPLIER_INCREASE_PER_SECOND: f32 = 0.00001;
+const BALL_SPEED_MULTIPLIER_INCREASE_PER_SECOND: f32 = 0.0001;
 
 pub struct BallPlugin;
 
@@ -15,6 +15,7 @@ impl Plugin for BallPlugin {
         app.add_systems(Startup, setup).add_systems(
             Update,
             (
+                wait_for_ball_assets.before(update_ball_speed_multiplier),
                 update_ball_speed_multiplier.before(update_ball),
                 update_ball,
                 check_for_wall_bounce.after(update_ball),
@@ -38,7 +39,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         Ball,
         Velocity::from_random(&mut rng),
-        BallCollidedAndStilllInCollision(false),
+        IsBallColliding::default(),
         SpriteBundle {
             texture: ball_texture_handle,
             transform: Transform {
@@ -49,6 +50,34 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..Default::default()
         },
     ));
+}
+
+// FIXME: This is yank and needs a different solution. Sadly I don't know better.
+fn wait_for_ball_assets(
+    images: Res<Assets<Image>>,
+    ball_asset_image_id: Res<BallAssetImageId>,
+    mut ball_image_size: ResMut<BallImageSize>,
+    asset_server: Res<AssetServer>,
+) {
+    use bevy::asset::LoadState;
+
+    if ball_image_size.0.is_none() {
+        match asset_server.load_state(ball_asset_image_id.0) {
+            LoadState::Failed(e) => {
+                error!("Could not load ball image! Error: {}", e);
+                panic!("Could not load ball image! Error: {}", e);
+            }
+            LoadState::Loaded => {
+                let ball_size = match images.get(ball_asset_image_id.0).map(|image| image.size()) {
+                    Some(ball_size) => Vec2::new(ball_size.x as f32, ball_size.y as f32),
+                    None => panic!("Could not get image size!"),
+                };
+
+                ball_image_size.0 = Some(ball_size);
+            }
+            _ => (),
+        }
+    }
 }
 
 fn update_ball(
@@ -66,18 +95,11 @@ fn update_ball(
 
 fn check_for_wall_bounce(
     window_dimensions: Res<WindowDimensions>,
-    mut query: Query<
-        (
-            &Transform,
-            &mut Velocity,
-            &mut BallCollidedAndStilllInCollision,
-        ),
-        With<Ball>,
-    >,
+    mut query: Query<(&Transform, &mut Velocity, &mut IsBallColliding), With<Ball>>,
     image_size: Res<BallImageSize>,
 ) {
-    let image_size = match image_size.0 {
-        Some(image_size) => image_size,
+    let half_image_size = match image_size.0 {
+        Some(image_size) => Vec2::new(image_size.x / 2.0, image_size.y / 2.0),
         None => Vec2::new(0.0, 0.0),
     };
 
@@ -85,17 +107,17 @@ fn check_for_wall_bounce(
 
     let (transform, mut velocity, mut collided) = query.single_mut();
 
-    if transform.translation.y - image_size.x <= -height
-        || transform.translation.y + image_size.x >= height
+    if transform.translation.y - half_image_size.x <= -height
+        || transform.translation.y + half_image_size.x >= height
     {
-        if !collided.0 {
+        if !collided.wall {
             info!("Ball hit wall");
             velocity.y *= -1.0;
 
-            collided.0 = true;
+            collided.wall = true;
         }
     } else {
-        collided.0 = false;
+        collided.wall = false;
     };
 }
 
@@ -103,34 +125,31 @@ fn check_for_point(
     window_dimensions: Res<WindowDimensions>,
     mut query: Query<(&mut Transform, &mut Velocity), With<Ball>>,
     image_size: Res<BallImageSize>,
+    mut score: ResMut<Score>,
 ) {
-    let image_size = match image_size.0 {
-        Some(image_size) => image_size,
+    let half_image_size = match image_size.0 {
+        Some(image_size) => Vec2::new(image_size.x / 2.0, image_size.y / 2.0),
         None => Vec2::new(0.0, 0.0),
     };
 
     let width = window_dimensions.width / 2.0;
 
     for (mut transform, mut velocity) in query.iter_mut() {
-        if transform.translation.x - image_size.x <= -width
-            || transform.translation.x + image_size.x >= width
-        {
-            info!("Point");
+        if transform.translation.x - half_image_size.x <= -width {
+            info!("Point player 1");
             reset(&mut transform, &mut velocity);
+            score.p1 += 1;
+        } else if transform.translation.x + half_image_size.x >= width {
+            info!("Point player 2");
+            reset(&mut transform, &mut velocity);
+            score.p2 += 1;
         };
     }
 }
 
 fn check_for_paddle_collision(
     paddle_dimensions: Res<PaddleDimensions>,
-    mut balls: Query<
-        (
-            &mut Velocity,
-            &Transform,
-            &mut BallCollidedAndStilllInCollision,
-        ),
-        With<Ball>,
-    >,
+    mut balls: Query<(&mut Velocity, &Transform, &mut IsBallColliding), With<Ball>>,
     paddles: Query<&Transform, With<Paddle>>,
     image_size: Res<BallImageSize>,
 ) {
@@ -145,12 +164,12 @@ fn check_for_paddle_collision(
             &paddle_dimensions,
             &image_size,
         ) {
-            if !collided.0 {
+            if !collided.paddle {
                 info!("Collided!");
 
                 ball_velocity.x *= -1.0;
 
-                collided.0 = true;
+                collided.paddle = true;
             }
 
             just_collided = true;
@@ -158,7 +177,7 @@ fn check_for_paddle_collision(
     }
 
     if !just_collided {
-        collided.0 = false;
+        collided.paddle = false;
     }
 }
 
@@ -209,8 +228,11 @@ fn update_ball_speed_multiplier(
 #[derive(Debug, Component)]
 struct Ball;
 
-#[derive(Debug, Component)]
-struct BallCollidedAndStilllInCollision(bool);
+#[derive(Debug, Default, Component)]
+struct IsBallColliding {
+    paddle: bool,
+    wall: bool,
+}
 
 #[derive(Debug, Resource)]
 struct BallImageSize(Option<Vec2>);
