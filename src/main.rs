@@ -7,7 +7,7 @@ use ball::BallPlugin;
 use paddle::PaddlePlugin;
 use rand::{rngs::ThreadRng, Rng};
 
-const SCORE_SIZE: f32 = 3.0;
+const SCORE_SIZE: f32 = 150.0;
 
 fn main() {
     App::new()
@@ -23,7 +23,7 @@ fn main() {
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>, windows: Query<&Window>) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d::default());
 
     let window = windows.single();
     commands.insert_resource(WindowDimensions {
@@ -35,42 +35,16 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, windows: Query<
 
     commands.spawn((
         PlayerId(0),
-        Text2dBundle {
-            text: Text::from_section(
-                "0",
-                TextStyle {
-                    font: font.clone(),
-                    font_size: 1.0,
-                    ..Default::default()
-                },
-            ),
-            transform: Transform {
-                translation: Vec3::new(0.0, 0.0, -1.0),
-                scale: Vec3::new(SCORE_SIZE, SCORE_SIZE, 1.0),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
+        Text2d::new("0"),
+        TextFont::from_font(font.clone()).with_font_size(SCORE_SIZE),
+        Transform::from_xyz(0.0, 0.0, 0.0),
     ));
 
     commands.spawn((
         PlayerId(1),
-        Text2dBundle {
-            text: Text::from_section(
-                "0",
-                TextStyle {
-                    font,
-                    font_size: 1.0,
-                    ..Default::default()
-                },
-            ),
-            transform: Transform {
-                translation: Vec3::new(0.0, 0.0, -1.0),
-                scale: Vec3::new(SCORE_SIZE, SCORE_SIZE, 1.0),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
+        Text2d::new("0"),
+        TextFont::from_font(font).with_font_size(SCORE_SIZE),
+        Transform::from_xyz(0.0, 0.0, 0.0),
     ));
 }
 
@@ -78,7 +52,7 @@ fn update_window_dimensions(
     mut window_dimensions: ResMut<WindowDimensions>,
     resize_event: Res<Events<WindowResized>>,
 ) {
-    let mut reader = resize_event.get_reader();
+    let mut reader = resize_event.get_cursor();
     for event in reader.read(&resize_event) {
         window_dimensions.width = event.width;
         window_dimensions.height = event.height;
@@ -129,12 +103,12 @@ struct Score {
 struct PlayerId(u8);
 
 fn update_score_position(
-    mut score_texts: Query<(&mut Transform, &PlayerId), With<Text>>,
+    mut score_texts: Query<(&mut Transform, &PlayerId), With<Text2d>>,
     window_dimensions: Res<WindowDimensions>,
 ) {
     for (mut transform, player_id) in score_texts.iter_mut() {
         transform.translation.x = (window_dimensions.width / 2.0) / 2.0;
-        transform.translation.y = (window_dimensions.height / 2.0) - 50.0;
+        transform.translation.y = (window_dimensions.height / 2.0) - 125.0;
 
         if player_id.0 == 1 {
             transform.translation.x *= -1.0;
@@ -142,14 +116,14 @@ fn update_score_position(
     }
 }
 
-fn update_score_text(mut score_texts: Query<(&mut Text, &PlayerId)>, score: Res<Score>) {
+fn update_score_text(mut score_texts: Query<(&mut Text2d, &PlayerId)>, score: Res<Score>) {
     for (mut text, player_id) in score_texts.iter_mut() {
         if player_id.0 == 0 {
-            text.sections.clear();
-            text.sections.push(TextSection::from(score.p1.to_string()));
+            text.clear();
+            text.push_str(&score.p1.to_string());
         } else if player_id.0 == 1 {
-            text.sections.clear();
-            text.sections.push(TextSection::from(score.p2.to_string()));
+            text.clear();
+            text.push_str(&score.p2.to_string());
         }
     }
 }

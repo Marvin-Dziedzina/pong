@@ -18,29 +18,29 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         Paddle,
         PlayerId(0),
-        SpriteBundle {
-            texture: paddle_texture_handle.clone(),
-            transform: Transform {
-                translation: Vec3::new(0.0, 0.0, 1.0),
-                scale: Vec3::new(paddle_dimensions.width, paddle_dimensions.height, 1.0),
-                ..Default::default()
-            },
+        Sprite {
+            image: paddle_texture_handle.clone(),
             ..Default::default()
         },
+        Transform::from_scale(Vec3::new(
+            paddle_dimensions.width,
+            paddle_dimensions.height,
+            1.0,
+        )),
     ));
 
     commands.spawn((
         Paddle,
         PlayerId(1),
-        SpriteBundle {
-            texture: paddle_texture_handle,
-            transform: Transform {
-                translation: Vec3::new(0.0, 0.0, 1.0),
-                scale: Vec3::new(paddle_dimensions.width, paddle_dimensions.height, 1.0),
-                ..Default::default()
-            },
+        Sprite {
+            image: paddle_texture_handle,
             ..Default::default()
         },
+        Transform::from_scale(Vec3::new(
+            paddle_dimensions.width,
+            paddle_dimensions.height,
+            1.0,
+        )),
     ));
 
     commands.insert_resource(paddle_dimensions);
@@ -77,12 +77,12 @@ fn move_paddle(
 
         // Up
         if keys.pressed(key_codes.0) {
-            transform.translation.y += window_dimension.height * 0.75 * time.delta_seconds();
+            transform.translation.y += window_dimension.height * 0.75 * time.delta_secs();
         };
 
         // Down
         if keys.pressed(key_codes.1) {
-            transform.translation.y -= window_dimension.height * 0.75 * time.delta_seconds();
+            transform.translation.y -= window_dimension.height * 0.75 * time.delta_secs();
         };
 
         let half_height = PADDLE_HEIGHT / 2.0;

@@ -40,13 +40,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         Ball,
         Velocity::from_random(&mut rng),
         IsBallColliding::default(),
-        SpriteBundle {
-            texture: ball_texture_handle,
-            transform: Transform {
-                translation: Vec3::new(0.0, 0.0, 0.0),
-                scale: Vec3::new(1.0, 1.0, 1.0),
-                ..Default::default()
-            },
+        Sprite {
+            image: ball_texture_handle,
             ..Default::default()
         },
     ));
@@ -87,9 +82,9 @@ fn update_ball(
 ) {
     for (mut transform, velocity) in query.iter_mut() {
         transform.translation.x +=
-            velocity.x * BASE_BALL_SPEED * ball_speed_multiplier.0 * time.delta_seconds();
+            velocity.x * BASE_BALL_SPEED * ball_speed_multiplier.0 * time.delta_secs();
         transform.translation.y +=
-            velocity.y * BASE_BALL_SPEED * ball_speed_multiplier.0 * time.delta_seconds();
+            velocity.y * BASE_BALL_SPEED * ball_speed_multiplier.0 * time.delta_secs();
     }
 }
 
@@ -221,7 +216,7 @@ fn update_ball_speed_multiplier(
     time: Res<Time>,
     mut ball_speed_multiplier: ResMut<BallSpeedMultiplier>,
 ) {
-    ball_speed_multiplier.0 += BALL_SPEED_MULTIPLIER_INCREASE_PER_SECOND * time.delta_seconds();
+    ball_speed_multiplier.0 += BALL_SPEED_MULTIPLIER_INCREASE_PER_SECOND * time.delta_secs();
     info!("Speed Multiplier: {}", ball_speed_multiplier.0);
 }
 
