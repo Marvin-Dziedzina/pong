@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_kira_audio::AudioControl;
 
 use crate::{
     paddle::{Paddle, PaddleDimensions},
@@ -45,6 +46,11 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..Default::default()
         },
     ));
+
+    commands.insert_resource(GameAudio {
+        paddle_hit: asset_server.load("sounds/paddleHit.wav"),
+        point: asset_server.load("sounds/point.wav"),
+    });
 }
 
 // FIXME: This is yank and needs a different solution. Sadly I don't know better.
@@ -92,6 +98,8 @@ fn check_for_wall_bounce(
     window_dimensions: Res<WindowDimensions>,
     mut query: Query<(&Transform, &mut Velocity, &mut IsBallColliding), With<Ball>>,
     image_size: Res<BallImageSize>,
+    audio: Res<bevy_kira_audio::Audio>,
+    game_audio: Res<GameAudio>,
 ) {
     let half_image_size = match image_size.0 {
         Some(image_size) => Vec2::new(image_size.x / 2.0, image_size.y / 2.0),
@@ -109,6 +117,8 @@ fn check_for_wall_bounce(
             info!("Ball hit wall");
             velocity.y *= -1.0;
 
+            audio.play(game_audio.paddle_hit.clone_weak());
+
             collided.wall = true;
         }
     } else {
@@ -121,6 +131,8 @@ fn check_for_point(
     mut query: Query<(&mut Transform, &mut Velocity), With<Ball>>,
     image_size: Res<BallImageSize>,
     mut score: ResMut<Score>,
+    audio: Res<bevy_kira_audio::Audio>,
+    game_audio: Res<GameAudio>,
 ) {
     let half_image_size = match image_size.0 {
         Some(image_size) => Vec2::new(image_size.x / 2.0, image_size.y / 2.0),
@@ -134,10 +146,14 @@ fn check_for_point(
             info!("Point player 1");
             reset(&mut transform, &mut velocity);
             score.p1 += 1;
+
+            audio.play(game_audio.point.clone_weak());
         } else if transform.translation.x + half_image_size.x >= width {
             info!("Point player 2");
             reset(&mut transform, &mut velocity);
             score.p2 += 1;
+
+            audio.play(game_audio.point.clone_weak());
         };
     }
 }
@@ -147,6 +163,8 @@ fn check_for_paddle_collision(
     mut balls: Query<(&mut Velocity, &Transform, &mut IsBallColliding), With<Ball>>,
     paddles: Query<&Transform, With<Paddle>>,
     image_size: Res<BallImageSize>,
+    audio: Res<bevy_kira_audio::Audio>,
+    game_audio: Res<GameAudio>,
 ) {
     let mut just_collided = false;
 
@@ -163,6 +181,8 @@ fn check_for_paddle_collision(
                 info!("Collided!");
 
                 ball_velocity.x *= -1.0;
+
+                audio.play(game_audio.paddle_hit.clone_weak());
 
                 collided.paddle = true;
             }
@@ -237,3 +257,9 @@ struct BallAssetImageId(AssetId<Image>);
 
 #[derive(Debug, Resource)]
 struct BallSpeedMultiplier(f32);
+
+#[derive(Debug, Resource)]
+struct GameAudio {
+    paddle_hit: Handle<bevy_kira_audio::AudioSource>,
+    point: Handle<bevy_kira_audio::AudioSource>,
+}

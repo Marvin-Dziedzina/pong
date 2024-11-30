@@ -4,6 +4,7 @@ mod ball;
 mod paddle;
 
 use ball::BallPlugin;
+use bevy_kira_audio::AudioPlugin;
 use paddle::PaddlePlugin;
 use rand::{rngs::ThreadRng, Rng};
 
@@ -11,9 +12,7 @@ const SCORE_SIZE: f32 = 150.0;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugins(BallPlugin)
-        .add_plugins(PaddlePlugin)
+        .add_plugins((DefaultPlugins, BallPlugin, PaddlePlugin, AudioPlugin))
         .init_resource::<WindowDimensions>()
         .init_resource::<Score>()
         .add_systems(Startup, setup)

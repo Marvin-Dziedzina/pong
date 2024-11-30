@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.15.0", features = ["png"] }
+bevy_kira_audio = { version = "0.21.0", features = ["wav"] }
 log = { version = "*", features = [
     "max_level_debug",
     "release_max_level_warn",
