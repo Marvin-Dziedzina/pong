@@ -7,7 +7,7 @@ use crate::{
 };
 
 const BASE_BALL_SPEED: f32 = 300.0;
-const BALL_SPEED_MULTIPLIER_INCREASE_PER_SECOND: f32 = 0.0001;
+const BALL_SPEED_MULTIPLIER_INCREASE_PER_SECOND: f32 = 0.001;
 
 pub struct BallPlugin;
 
